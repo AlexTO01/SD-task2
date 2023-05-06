@@ -24,7 +24,6 @@ class SimpleClient:
         mess = GetRequest(key=key)
         print("entra antes request")
         val = self.stub.Get(mess)
-        print(val)
         return val
 
 
