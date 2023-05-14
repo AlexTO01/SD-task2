@@ -7,7 +7,6 @@ from KVStore.protos.kv_store_shardmaster_pb2 import *
 
 logger = logging.getLogger(__name__)
 
-
 class ShardMasterService:
     def join(self, server: str):
         pass
@@ -30,13 +29,16 @@ class ShardMasterSimpleService(ShardMasterService):
         """
         To fill with your code
         """
+        self.servers = [()]
 
     def join(self, server: str):
+        self.servers.append(server)
         """
         To fill with your code
         """
 
     def leave(self, server: str):
+        self.servers.remove(server)
         """
         To fill with your code
         """

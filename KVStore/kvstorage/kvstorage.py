@@ -4,6 +4,9 @@ from typing import Dict, Union, List
 import logging
 import grpc
 import redis
+
+
+import KVStore.protos.kv_store_pb2_grpc
 from KVStore.protos.kv_store_pb2 import *
 from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer, KVStoreStub
 
@@ -50,15 +53,13 @@ class KVStorageService:
 class KVStorageSimpleService(KVStorageService):
 
     def __init__(self):
+        super().__init__()
         self.db = redis.StrictRedis(host="localhost", port="6379", db=0, decode_responses=True)
 
     def get(self, key: int) -> Union[str, None]:
-        print("entra despues request")
         val = self.db.get(key)
-        print("hace la función")
         if val is None:
             return None
-
         return val
 
     def l_pop(self, key: int) -> Union[str, None]:
@@ -156,29 +157,34 @@ class KVStorageServicer(KVStoreServicer):
         """
 
     def Get(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
+        key = request.key
+        resp = self.storage_service.get(key)
+        mess = GetResponse(value=resp)
+        return mess
 
     def LPop(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
+        key = request.key
+        resp = self.storage_service.l_pop(key)
+        mess = GetResponse(value=resp)
+        return mess
 
     def RPop(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
+        key = request.key
+        resp = self.storage_service.r_pop(key)
+        mess = GetResponse(value=resp)
+        return mess
 
     def Put(self, request: PutRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        key = request.key
+        val = request.value
+        self.storage_service.put(key=key, value=val)
+        return KVStore.protos.kv_store_pb2_grpc.google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Append(self, request: AppendRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        key = request.key
+        val = request.value
+        self.storage_service.append(key=key, value=val)
+        return KVStore.protos.kv_store_pb2_grpc.google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Redistribute(self, request: RedistributeRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """

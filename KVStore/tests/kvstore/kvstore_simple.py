@@ -15,7 +15,6 @@ class SimpleKVStoreTests(Test):
         client = SimpleClient(self.master_address)
 
         assert (test_get(client, 10, None))
-
         assert (test_put(client, 33, "?!?!?"))
         assert (test_get(client, 33, "?!?!?"))
 
