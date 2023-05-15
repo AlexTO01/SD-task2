@@ -1,12 +1,12 @@
 from typing import Union, Dict
 import grpc
 import logging
+import threading
 
 from KVStore.protos.kv_store_pb2 import GetRequest, PutRequest, GetResponse
 from KVStore.protos.kv_store_pb2_grpc import KVStoreStub
 from KVStore.protos.kv_store_shardmaster_pb2 import QueryRequest, QueryResponse, QueryReplicaRequest, Operation
 from KVStore.protos.kv_store_shardmaster_pb2_grpc import ShardMasterStub
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,49 +17,65 @@ def _get_return(ret: GetResponse) -> Union[str, None]:
     else:
         return None
 
+
 class SimpleClient:
+
     def __init__(self, kvstore_address: str):
         self.channel = grpc.insecure_channel(kvstore_address)
         self.stub = KVStoreStub(self.channel)
+        self.mutex = threading.Lock()
 
     def get(self, key: int) -> Union[str, None]:
         # Crea una instancia del mensaje y asigna valores a sus campos
         mess = GetRequest(key=key)
-
         # Llama al método remoto en el servidor
+        self.mutex.acquire()
         val = self.stub.Get(mess)
-
-        if val is None:
+        self.mutex.release()
+        res = val.value
+        if res == 'None':
             return None
-        else:
-            return val
-
-
+        return res
 
     def l_pop(self, key: int) -> Union[str, None]:
         mess = GetRequest(key=key)
+        self.mutex.acquire()
         val = self.stub.LPop(mess)
-        return val
+        self.mutex.release()
+        res = val.value
+        if res == 'None':
+            return None
+        return res
 
     def r_pop(self, key: int) -> Union[str, None]:
         mess = GetRequest(key=key)
+        self.mutex.acquire()
         val = self.stub.RPop(mess)
-        return val
+        self.mutex.release()
+        res = val.value
+        if res == 'None':
+            return None
+        return res
 
     def put(self, key: int, value: str):
         mess = PutRequest(key=key, value=value)
+        self.mutex.acquire()
         self.stub.Put(mess)
+        self.mutex.release()
 
     def append(self, key: int, value: str):
         mess = PutRequest(key=key, value=value)
+        self.mutex.acquire()
         self.stub.Append(mess)
+        self.mutex.release()
 
     def stop(self):
         self.channel.close()
 
 
 class ShardClient(SimpleClient):
-    def __init__(self, shard_master_address: str):
+    def __init__(self, shard_master_address: str, kvstore_address: str):
+        super().__init__(kvstore_address)
         self.channel = grpc.insecure_channel(shard_master_address)
         self.stub = ShardMasterStub(self.channel)
         """
@@ -76,18 +92,15 @@ class ShardClient(SimpleClient):
         To fill with your code
         """
 
-
     def r_pop(self, key: int) -> Union[str, None]:
         """
         To fill with your code
         """
 
-
     def put(self, key: int, value: str):
         """
         To fill with your code
         """
-
 
     def append(self, key: int, value: str):
         """
@@ -107,21 +120,17 @@ class ShardReplicaClient(ShardClient):
         To fill with your code
         """
 
-
     def r_pop(self, key: int) -> Union[str, None]:
         """
         To fill with your code
         """
-
 
     def put(self, key: int, value: str):
         """
         To fill with your code
         """
 
-
     def append(self, key: int, value: str):
         """
         To fill with your code
         """
-

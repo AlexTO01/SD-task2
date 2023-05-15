@@ -59,26 +59,32 @@ class KVStorageSimpleService(KVStorageService):
     def get(self, key: int) -> Union[str, None]:
         val = self.db.get(key)
         if val is None:
-            return None
+            return 'None'
         return val
 
     def l_pop(self, key: int) -> Union[str, None]:
-        val = self.db.lpop(key)
+        val = self.db.get(key)
         if val is None:
-            return None
+            return 'None'
         elif val == "":
             return ""
         else:
-            return val
+            finalval = val[0]
+            new = val[1:]
+            self.db.set(key, new)
+            return finalval
 
     def r_pop(self, key: int) -> Union[str, None]:
-        val = self.db.rpop(key)
+        val = self.db.get(key)
         if val is None:
-            return None
+            return 'None'
         elif val == "":
             return ""
         else:
-            return val
+            finalval = val[-1]
+            new = val[:-1]
+            self.db.set(key, new)
+            return finalval
 
     def put(self, key: int, value: str):
         self.db.set(key, value)
