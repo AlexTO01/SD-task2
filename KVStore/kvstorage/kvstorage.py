@@ -1,15 +1,13 @@
-import time
-import random
-from typing import Dict, Union, List
 import logging
+from typing import Union, List
+
 import grpc
 import redis
 
-
 import KVStore.protos.kv_store_pb2_grpc
+from KVStore.protos.kv_store_pb2_grpc import KVStoreStub
 from KVStore.protos.kv_store_pb2 import *
-from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer, KVStoreStub
-
+from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer
 from KVStore.protos.kv_store_shardmaster_pb2 import Role
 
 EVENTUAL_CONSISTENCY_INTERVAL: int = 2
@@ -54,7 +52,7 @@ class KVStorageSimpleService(KVStorageService):
 
     def __init__(self):
         super().__init__()
-        self.db = redis.StrictRedis(host="localhost", port="6379", db=0, decode_responses=True)
+        self.db = redis.Redis(host="localhost", port="6379", decode_responses=True)
 
     def get(self, key: int) -> Union[str, None]:
         val = self.db.get(key)
@@ -99,14 +97,22 @@ class KVStorageSimpleService(KVStorageService):
             self.db.append(key, value)
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        """
-        To fill with your code
-        """
+        channel = grpc.insecure_channel(destination_server)
+        stub = KVStoreStub(channel)
+        i = lower_val
+        list = []
+        while i < upper_val:
+            val = self.db.get(i)
+            if val is not None:
+                list.append(KeyValue(key=i, value=val))
+            i += 1
+
+        mess = TransferRequest(keys_values=list)
+        stub.Transfer(mess)
 
     def transfer(self, keys_values: List[KeyValue]):
-        """
-        To fill with your code
-        """
+        for kv in keys_values:
+            self.db.set(kv.key, kv.value)
 
 
 class KVStorageReplicasService(KVStorageSimpleService):
@@ -158,9 +164,6 @@ class KVStorageServicer(KVStoreServicer):
 
     def __init__(self, service: KVStorageService):
         self.storage_service = service
-        """
-        To fill with your code
-        """
 
     def Get(self, request: GetRequest, context) -> GetResponse:
         key = request.key
@@ -193,14 +196,16 @@ class KVStorageServicer(KVStoreServicer):
         return KVStore.protos.kv_store_pb2_grpc.google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Redistribute(self, request: RedistributeRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        lower = request.lower_val
+        upper = request.upper_val
+        server = request.destination_server
+        self.storage_service.redistribute(server, lower, upper)
+        return KVStore.protos.kv_store_pb2_grpc.google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Transfer(self, request: TransferRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        list = request.keys_values
+        self.storage_service.transfer(list)
+        return KVStore.protos.kv_store_pb2_grpc.google_dot_protobuf_dot_empty__pb2.Empty()
 
     def AddReplica(self, request: ServerRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
