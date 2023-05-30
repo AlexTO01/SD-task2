@@ -40,3 +40,6 @@ class ShardKVSimpleTests(Test):
         assert (test_get(client, 86, "URV_ROCKS"))
         assert (test_get(client, 34, "paxos_enjoyer"))
 
+        assert (test_put(client, 86, 'None'))
+        assert (test_put(client, 34, 'None'))
+

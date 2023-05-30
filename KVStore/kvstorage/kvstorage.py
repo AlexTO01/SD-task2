@@ -85,7 +85,10 @@ class KVStorageSimpleService(KVStorageService):
             return finalval
 
     def put(self, key: int, value: str):
-        self.db.set(key, value)
+        if value == 'None':
+            self.db.delete(key)
+        else:
+            self.db.set(key, value)
 
     def append(self, key: int, value: str):
 

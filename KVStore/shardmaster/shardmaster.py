@@ -87,26 +87,24 @@ class ShardMasterSimpleService(ShardMasterService):
 
     def distribuir(self):
         keys_por_servidor = len(n) // len(self.servers)  # Número de keys por servidor (división entera)
-        sobrante = len(n) % len(self.servers)  # Número de keys sobrantes
         inicio = 0
 
-        for i in range(len(self.servers)):
-            fin = inicio + keys_por_servidor
+        if len(self.servers) > 0:
+            for i in range(len(self.servers)):
+                fin = inicio + keys_por_servidor
 
-            # Si hay keys sobrantes, distribuirlas equitativamente
-            if sobrante > 0:
-                fin += 1
-                sobrante -= 1
-            self.servers[i].asignarKey(fin, inicio)
+                if fin > KEYS_UPPER_THRESHOLD:
+                    fin = 99
 
-            inicio = fin  # Actualizar el inicio para el siguiente servidor
+                self.servers[i].asignarKey(fin, inicio)
+                inicio = fin+1  # Actualizar el inicio para el siguiente servidor
 
-        for server in self.servers:
-            channel = grpc.insecure_channel(server.getServer())
-            stub = KVStoreStub(channel)
-            mess = RedistributeRequest(destination_server=server.getServer(), lower_val=server.getMinKey(),
-                                       upper_val=server.getMaxKey())
-            stub.Redistribute(mess)
+            for server in self.servers:
+                channel = grpc.insecure_channel(server.getServer())
+                stub = KVStoreStub(channel)
+                mess = RedistributeRequest(destination_server=server.getServer(), lower_val=server.getMinKey(),
+                                           upper_val=server.getMaxKey())
+                stub.Redistribute(mess)
 
 
 class ShardMasterReplicasService(ShardMasterSimpleService):
